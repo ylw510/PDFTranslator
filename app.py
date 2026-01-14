@@ -1,11 +1,20 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 from pdf_parser import PDFParser
 from translator import PDFTranslator
 from config import Config
 
-app = Flask(__name__)
+# 开发模式：前端在3000端口，后端在5000端口
+# 生产模式：前端构建后放在dist目录
+if os.path.exists('frontend/dist'):
+    app = Flask(__name__, static_folder='frontend/dist', static_url_path='')
+else:
+    app = Flask(__name__)
+
+CORS(app)  # 允许跨域请求
+
 app.config['UPLOAD_FOLDER'] = Config.UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = Config.MAX_CONTENT_LENGTH
 
@@ -17,9 +26,21 @@ def allowed_file(filename):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if app.static_folder and os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    else:
+        # 开发模式，返回简单提示
+        return jsonify({
+            'message': '后端API服务运行中',
+            'frontend': '请访问 http://localhost:3000 查看前端界面',
+            'api_docs': {
+                'upload': '/api/upload (POST)',
+                'translate': '/api/translate (POST)'
+            }
+        })
 
-@app.route('/upload', methods=['POST'])
+@app.route('/api/upload', methods=['POST'])
+@app.route('/upload', methods=['POST'])  # 保持向后兼容
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': '没有文件上传'}), 400
@@ -50,7 +71,8 @@ def upload_file():
 
     return jsonify({'error': '不支持的文件类型'}), 400
 
-@app.route('/translate', methods=['POST'])
+@app.route('/api/translate', methods=['POST'])
+@app.route('/translate', methods=['POST'])  # 保持向后兼容
 def translate():
     data = request.json
     filepath = data.get('filepath')

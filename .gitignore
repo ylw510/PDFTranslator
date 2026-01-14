@@ -11,6 +11,11 @@
 uploads/
 uploads/*
 
+# 前端依赖
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
 # Python相关
 __pycache__/
 *.py[cod]
